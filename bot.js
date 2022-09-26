@@ -10,6 +10,7 @@ winston.configure({
 })
 
 const bot = new Telegraf(process.env.BOT_TOKEN)
+bot.launch().then(() => logInfo('Bot started', null, 'bot started'))
 
 bot.command('start', async ctx => {
   const greeting = 'Hello there! Welcome to RubyGems finder telegram bot!\nI respond to /latest /find + name of gem. Please try it';
@@ -31,65 +32,66 @@ bot.command('latest', async ctx => {
   })
   .catch(err => logOnCommandError('latest', id, err, ctx))
 })
+.catch(err => logOnCommandError('latest', 'none', err))
 
 bot.command('find', async ctx => {
   const id = ctx.chat.id
   const msgText = ctx.message.text
-  if (msgText === '/find') {
-    sendNameWarningMessage(ctx, id);
-  } else {
-    const name = msgText.replaceAll('/find', '')
-    const uri = `https://rubygems.org/api/v1/search.json?query=${name}`
-    let msg = 'Search result:\n'
-    logInfo('find gems', id, `Searching gems with name "${name}"`, ctx)
-    axios
-    .get(uri)
-    .then(res => {
-      msg = gemsList(res, msg)
-      ctx
-      .replyWithHTML(msg)
-      .then(() => logInfo('find-success', id, `${name} found`))
-      .catch(err => logOnCommandError('find', id, err, ctx))
-    })
+  checkOnName(msgText, '/find', ctx)
+  const name = msgText.replaceAll('/find', '')
+  const uri = `https://rubygems.org/api/v1/search.json?query=${name}`
+  let msg = 'Search result:\n'
+  logInfo('find gems', id, `Searching gems with name "${name}"`, ctx)
+  axios
+  .get(uri)
+  .then(res => {
+    msg = gemsList(res, msg)
+    ctx
+    .replyWithHTML(msg)
+    .then(() => logInfo('find-success', id, `${name} found`))
     .catch(err => logOnCommandError('find', id, err, ctx))
-  }
+  })
+  .catch(err => logOnCommandError('find', id, err, ctx))
 })
 .catch(err => logOnCommandError('find', 'none', err))
 
 bot.command('deps', async ctx => {
   const id = ctx.chat.id
   const msgText = ctx.message.text
-  if (msgText === '/deps') {
-    sendNameWarningMessage(ctx, id)
-  } else {
-    const name = msgText.replaceAll('/deps', '').replaceAll(' ', '')
-    const uri = `https://rubygems.org/api/v1/gems/${name}.json`
-    let msg = `Dependencies for \"${name}\":\n`
-    let dev = `\n<b>Development:</b>\n`
-    let run = `\n<b>Runtime:</b>\n`
-    logInfo('deps search', id, 'Searching dependencies.', ctx)
-    axios
-    .get(uri)
-    .then(
-        async res => {
-          dev = await accumDeps(
-              res.data.dependencies.development,
-              dev
-          )
-          run = await accumDeps(
-              res.data.dependencies.runtime,
-              run
-          )
-          ctx.replyWithHTML(msg.concat(dev).concat(run))
-          .catch(err => logOnCommandError('deps', id, err, ctx))
-          logInfo('deps-success', id, `${name} deps found`)
-        }
-    )
-    .catch(err => logOnCommandError('deps', id, err, ctx))
-  }
+  checkOnName(msgText, '/deps',ctx);
+  const name = msgText.replaceAll('/deps', '').replaceAll(' ', '')
+  const uri = `https://rubygems.org/api/v1/gems/${name}.json`
+  let msg = `Dependencies for \"${name}\":\n`
+  let dev = `\n<b>Development:</b>\n`
+  let run = `\n<b>Runtime:</b>\n`
+  logInfo('deps search', id, 'Searching dependencies.', ctx)
+  axios
+  .get(uri)
+  .then(
+      async res => {
+        dev = await accumDeps(
+            res.data.dependencies.development,
+            dev
+        )
+        run = await accumDeps(
+            res.data.dependencies.runtime,
+            run
+        )
+        ctx.replyWithHTML(msg.concat(dev).concat(run))
+        .catch(err => logOnCommandError('deps', id, err, ctx))
+        logInfo('deps-success', id, `${name} deps found`)
+      }
+  )
+  .catch(err => logOnCommandError('deps', id, err, ctx))
 })
+.catch(err => logOnCommandError('Empty name', null, err))
 
-bot.launch().then(() => logInfo('Bot started', null, 'bot started'))
+const checkOnName = (msgText, value, ctx) => {
+  if (msgText === value) {
+    sendNameWarningMessage(ctx)
+    throw new Error('Empty name')
+  }
+}
 
 const accumDeps = async (deps, accumulator) => {
   if (deps.length !== 0) {
@@ -109,7 +111,7 @@ const depsAsHtml = async (dep) => {
     return response.data.project_uri;
   })
   if (link === undefined) {
-    console.warn('Data not presented!')
+    logInfo('empty link', null, `${dep.name} link not found`)
   }
   return `<b>Name:</b> ${dep.name}, <b>link:</b> ${link}\n`;
 }
@@ -124,11 +126,8 @@ const gemsList = (res, msg) => {
   return msg;
 }
 
-const sendNameWarningMessage = (ctx, id) => {
-  ctx
-  .replyWithMarkdown(
-      'You didn\'t specify a name of gem, try again please `/command gemName`')
-  .then(() => console.warn(id, 'empty name'))
+const sendNameWarningMessage = (ctx) => {
+  ctx.replyWithMarkdown('You didn\'t specify a name of gem, try again please `/command gemName`')
 }
 
 process.once('SIGINT', () => bot.stop('SIGINT'))
