@@ -1,18 +1,12 @@
 const {Telegraf} = require('telegraf')
-const express = require('express')
 const axios = require('axios')
-const path = require('path')
-const port = process.env.PORT || 3000
-const expressApp = express()
 const {logOnCommandError} = require("./src/log");
 const winston = require("winston");
 
 require('dotenv').config()
 
 winston.configure({
-  transports: [
-    new (winston.transports.File)({ filename: './logs/logging.log' })
-  ]
+  transports: [new (winston.transports.File)({filename: './logs/logging.log'})]
 })
 
 const bot = new Telegraf(process.env.BOT_TOKEN)
@@ -28,7 +22,7 @@ const gemsList = (res, msg) => {
   .slice(0, 10)
   .forEach(gem => {
     const info = gem.info.toString().replaceAll('\n', ' ')
-    msg += `\n*Gem:* ${gem.name}\n*Downloads:* ${gem.downloads}\n*Info:* ${info}\n*Link:* ${gem.project_uri}\n`
+    msg += `\n<b>Gem:</b> ${gem.name}\n<b>Downloads:</b> ${gem.downloads}\n<b>Info:</b> ${info}\n<b>Link:</b> ${gem.project_uri}\n`
   })
   return msg;
 }
@@ -39,7 +33,7 @@ bot.command('latest', async ctx => {
   axios
   .get('https://rubygems.org/api/v1/activity/just_updated.json')
   .then(res => {
-    ctx.replyWithMarkdown(gemsList(res, msg))
+    ctx.replyWithHTML(gemsList(res, msg))
     .then(() => console.log(id, 'latest'))
     .catch(err => logOnCommandError('latest', id, err, ctx))
   })
@@ -63,7 +57,7 @@ bot.command('find', async ctx => {
     .then(res => {
       msg = gemsList(res, msg)
       ctx
-      .replyWithMarkdown(msg)
+      .replyWithHTML(msg)
       .then(() => console.log(id, 'success find'))
       .catch(err => logOnCommandError('find', id, err, ctx))
     })
