@@ -12,16 +12,8 @@ winston.configure({
 })
 
 app.use(parser.json())
-
-app.listen(process.env.PORT)
-
-app.post('/'+process.env.BOT_TOKEN, (req, res) => {
-  bot.processUpdate(req.body)
-  res.sendStatus(200)
-})
-
+app.listen(process.env.PORT || 5000)
 const bot = new Telegraf(process.env.BOT_TOKEN)
-
 bot.launch().then(() => logInfo('Bot started', null, 'bot started'))
 
 bot.command('start', async ctx => {
