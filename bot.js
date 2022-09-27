@@ -2,15 +2,20 @@ const {Telegraf} = require('telegraf')
 const axios = require('axios')
 const {logOnCommandError, logInfo, now} = require("./src/log");
 const winston = require("winston");
-
 require('dotenv').config()
+const express = require('express')
+const app = express()
+
+app.listen(process.env.PORT || 3000, '0.0.0.0', () => {
+  console.log('Server started...')
+})
 
 winston.configure({
   transports: [new (winston.transports.File)({filename: `./logs/${now()}.log`})]
 })
 
 const bot = new Telegraf(process.env.BOT_TOKEN)
-bot.launch().then(() => logInfo('Bot started', null, 'bot started'))
+bot.launch({ port: process.env.PORT }).then(() => logInfo('Bot started', null, 'bot started'))
 
 bot.command('start', async ctx => {
   const greeting = 'Hello there! Welcome to RubyGems finder telegram bot!\nI respond to /latest /find /deps /ver. Please try it';
