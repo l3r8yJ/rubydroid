@@ -2,19 +2,12 @@ const {Telegraf} = require('telegraf')
 const axios = require('axios')
 const {logOnCommandError, logInfo, now} = require("./src/log");
 const winston = require("winston");
-const express = require('express')
-const parser = require('body-parser')
-const app = express()
 require('dotenv').config()
 
 winston.configure({
   transports: [new (winston.transports.File)({filename: `./logs/${now()}.log`})]
 })
 
-app.use(parser.json())
-app.listen(process.env.PORT || 3001, '0.0.0.0', () => {
-  console.log('server is running')
-})
 const bot = new Telegraf(process.env.BOT_TOKEN)
 bot.launch().then(() => logInfo('Bot started', null, 'bot started'))
 
@@ -141,3 +134,8 @@ const sendNameWarningMessage = (ctx, cmd) => {
 
 process.once('SIGINT', () => bot.stop('SIGINT'))
 process.once('SIGTERM', () => bot.stop('SIGTERM'))
+
+const express = require('express')
+const app = express()
+
+app.listen(process.env.PORT)
