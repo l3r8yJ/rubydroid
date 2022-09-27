@@ -13,10 +13,11 @@ const bot = new Telegraf(process.env.BOT_TOKEN)
 bot.launch().then(() => logInfo('Bot started', null, 'bot started'))
 
 bot.command('start', async ctx => {
-  const greeting = 'Hello there! Welcome to RubyGems finder telegram bot!\nI respond to /latest /find + name of gem. Please try it';
+  const greeting = 'Hello there! Welcome to RubyGems finder telegram bot!\nI respond to /latest /find /deps /ver. Please try it';
   const id = ctx.chat.id;
-  bot.telegram.sendMessage(id, greeting)
-  .then(() => logInfo('start', id, `${id} registered`))
+  bot.telegram
+  .sendMessage(id, greeting)
+  .then(() => logInfo(`start for ${id}`, id, `${id} registered`))
 })
 
 bot.command('latest', async ctx => {
@@ -25,41 +26,34 @@ bot.command('latest', async ctx => {
   logInfo('latest', id, 'Searching latest gems.', ctx)
   axios
   .get('https://rubygems.org/api/v1/activity/just_updated.json')
-  .then(res => {
-    ctx.replyWithHTML(gemsList(res, msg))
-    .then(() => logInfo('latest-success', id, 'latest found'))
-    .catch(err => logOnCommandError('latest', id, err, ctx))
-  })
+  .then(res => ctx.replyWithHTML(gemsList(res, msg)))
+  .then(() => logInfo('latest-success', id, 'latest found'))
   .catch(err => logOnCommandError('latest', id, err, ctx))
 })
 .catch(err => logOnCommandError('latest', 'none', err))
 
 bot.command('find', async ctx => {
   const id = ctx.chat.id
-  const msgText = ctx.message.text
-  checkOnName(msgText, '/find', ctx)
-  const name = msgText.replaceAll('/find', '')
+  const text = ctx.message.text
+  checkOnName(text, '/find', ctx)
+  const name = purgeName(text, '/find')
   const uri = `https://rubygems.org/api/v1/search.json?query=${name}`
   let msg = 'Search result:\n'
   logInfo('find gems', id, `Searching gems with name "${name}"`, ctx)
   axios
   .get(uri)
-  .then(res => {
-    msg = gemsList(res, msg)
-    ctx
-    .replyWithHTML(msg)
-    .then(() => logInfo('find-success', id, `${name} found`))
-    .catch(err => logOnCommandError('find', id, err, ctx))
-  })
+  .then(res => msg = gemsList(res, msg))
+  .then(async () => ctx.replyWithHTML(msg))
+  .then(async () => logInfo('find-success', id, `${name} found`))
   .catch(err => logOnCommandError('find', id, err, ctx))
 })
 .catch(err => logOnCommandError('find', 'none', err))
 
 bot.command('deps', async ctx => {
   const id = ctx.chat.id
-  const msgText = ctx.message.text
-  checkOnName(msgText, '/deps',ctx);
-  const name = msgText.replaceAll('/deps', '').replaceAll(' ', '')
+  const text = ctx.message.text
+  checkOnName(text, '/deps',ctx);
+  const name = purgeName(text, '/deps')
   const uri = `https://rubygems.org/api/v1/gems/${name}.json`
   let msg = `Dependencies for \"${name}\":\n`
   let dev = `\n<b>Development:</b>\n`
@@ -67,39 +61,50 @@ bot.command('deps', async ctx => {
   logInfo('deps search', id, 'Searching dependencies.', ctx)
   axios
   .get(uri)
-  .then(
-      async res => {
-        dev = await accumDeps(
-            res.data.dependencies.development,
-            dev
-        )
-        run = await accumDeps(
-            res.data.dependencies.runtime,
-            run
-        )
-        ctx.replyWithHTML(msg.concat(dev).concat(run))
-        .catch(err => logOnCommandError('deps', id, err, ctx))
-        logInfo('deps-success', id, `${name} deps found`)
-      }
-  )
+  .then(async res => {
+    dev += await accumDeps(res.data.dependencies.development)
+    run += await accumDeps(res.data.dependencies.runtime)
+  })
+  .then(async () => ctx.replyWithHTML(msg.concat(dev).concat(run)))
+  .then(async () => logInfo('deps-success', id, `${name} deps found`))
   .catch(err => logOnCommandError('deps', id, err, ctx))
 })
 .catch(err => logOnCommandError('Empty name', null, err))
 
-const checkOnName = (msgText, value, ctx) => {
-  if (msgText === value) {
-    sendNameWarningMessage(ctx)
+bot.command('ver', async ctx => {
+  const id = ctx.chat.id
+  const text = ctx.message.text
+  checkOnName(text, '/ver', ctx)
+  const name = purgeName(text, '/ver')
+  let msg = `Last version of ${name} – `
+  const uri = `https://rubygems.org/api/v1/gems/${name}.json`
+  logInfo('version searching', id, `Searching version for "${name}".`, ctx)
+  axios
+  .get(uri)
+  .then(async res => msg += res.data.version)
+  .then(async () => ctx.reply(msg))
+  .then(async () => logInfo('version found', id, `version found for ${name}`))
+  .catch(err => logOnCommandError('ver', id, err, ctx))
+})
+
+const checkOnName = (text, cmd, ctx) => {
+  if (text === cmd) {
+    sendNameWarningMessage(ctx, cmd)
     throw new Error('Empty name')
   }
 }
 
-const accumDeps = async (deps, accumulator) => {
-  if (deps.length !== 0) {
-    for (const dep of deps) {
-      accumulator += await depsAsHtml(dep);
-    }
-  } else {
-    accumulator += 'Dependencies not found...'
+const purgeName = (text, cmd) => {
+  return text.replaceAll(cmd, '').replaceAll(' ', '');
+}
+
+const accumDeps = async (deps) => {
+  let accumulator = ''
+  if (deps.length === 0) {
+    accumulator = 'Dependencies not found...'
+  }
+  for (const dep of deps) {
+    accumulator += await depsAsHtml(dep);
   }
   return accumulator;
 }
@@ -107,9 +112,7 @@ const accumDeps = async (deps, accumulator) => {
 const depsAsHtml = async (dep) => {
   const link = await axios
   .get(`https://rubygems.org/api/v1/gems/${dep.name}.json`)
-  .then(response => {
-    return response.data.project_uri;
-  })
+  .then(response => response.data.project_uri)
   if (link === undefined) {
     logInfo('empty link', null, `${dep.name} link not found`)
   }
@@ -126,8 +129,8 @@ const gemsList = (res, msg) => {
   return msg;
 }
 
-const sendNameWarningMessage = (ctx) => {
-  ctx.replyWithMarkdown('You didn\'t specify a name of gem, try again please `/command gemName`')
+const sendNameWarningMessage = (ctx, cmd) => {
+  ctx.replyWithMarkdown(`You didn't specify a name of gem, try again please, for example: "${cmd} jini"`)
 }
 
 process.once('SIGINT', () => bot.stop('SIGINT'))
