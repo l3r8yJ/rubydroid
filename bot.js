@@ -121,7 +121,7 @@ const depsAsHtml = async (dep) => {
   if (link === undefined) {
     logInfo('empty link', null, `${dep.name} link not found`)
   }
-  return `<b>Name:</b> ${dep.name}, <b>link:</b> ${link}\n`;
+  return `<b>Name:</b> ${dep.name}\n<b>Link:</b> ${link}\n`;
 }
 
 const gemsList = (res, msg) => {
