@@ -144,7 +144,7 @@ const gemsList = (res, msg) => {
   .slice(0, 10)
   .forEach(gem => {
     let info = gem.info.toString().replaceAll('\n', ' ')
-    if (info.length > 40) {
+    if (info.length > 150) {
       info = info.substring(0, 37).concat('...')
     }
     msg += `\n<b>Gem:</b> ${gem.name}\n<b>Downloads:</b> ${gem.downloads}\n<b>Info:</b> ${info}\n<b>Link:</b> ${gem.project_uri}\n`;
