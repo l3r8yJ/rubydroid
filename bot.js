@@ -99,9 +99,10 @@ bot.command('src', async ctx => {
   const name = purgeName(text, '/src')
   const uri = `https://rubygems.org/api/v1/gems/${name}.json`
   logInfo('source searching', id, `Searching source for "${name}".`, ctx)
+  let src
   axios
   .get(uri)
-  .then(async res => res.data.source_code_uri)
+  .then(async res => src = res.data.source_code_uri)
   .then(async src => ctx.reply(`Source code for ${name}: ${src}`))
   .then(async () => logInfo('src', id, `src for ${name}.`))
   .catch(err => logOnCommandError('src', id, err, ctx))
