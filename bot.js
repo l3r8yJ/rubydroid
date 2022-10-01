@@ -102,7 +102,11 @@ bot.command('src', async ctx => {
   let src
   axios
   .get(uri)
-  .then(async res => src = res.data.source_code_uri)
+  .then(async res => {
+    const source = res.data.source_code_uri;
+    console.log(source)
+    return src = source
+  })
   .then(async src => ctx.reply(`Source code for ${name}: ${src}`))
   .then(async () => logInfo('src', id, `src for ${name}.`))
   .catch(err => logOnCommandError('src', id, err, ctx))
