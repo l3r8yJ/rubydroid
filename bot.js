@@ -96,7 +96,7 @@ bot.command('src', async ctx => {
   const id = ctx.chat.id
   const text = ctx.message.text
   checkOnName(text, '/src', ctx)
-  const name = purgeName(text, '/ver')
+  const name = purgeName(text, '/src')
   const uri = `https://rubygems.org/api/v1/gems/${name}.json`
   logInfo('source searching', id, `Searching source for "${name}".`, ctx)
   axios
