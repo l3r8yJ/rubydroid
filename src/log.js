@@ -24,7 +24,7 @@ const logOnCommandError = (name, id, err, ctx = undefined) => {
 
 const logInfo = (name, id, info, ctx = undefined) => {
   console.info(name, id)
-  winston.info(`Chat_id: ${id}, Name: ${name}, Date: ${now()} `.concat(info))
+  winston.info(`Chat_id: ${id}, Name: ${name}, Date: ${now()} ${info}`)
   if (ctx !== undefined) {
     ctx.reply(info)
   }

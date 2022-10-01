@@ -18,7 +18,7 @@ const bot = new Telegraf(process.env.BOT_TOKEN)
 bot.launch({ port: process.env.PORT }).then(() => logInfo('Bot started', null, 'bot started'))
 
 bot.command('start', async ctx => {
-  const greeting = 'Hello there! Welcome to RubyGems finder telegram bot!\nI respond to /latest /find /deps /ver. Please try it';
+  const greeting = 'Hello there! Welcome to RubyGems finder telegram bot!\nI respond to /latest /find /deps /ver /src. Please try it';
   const id = ctx.chat.id;
   bot.telegram
   .sendMessage(id, greeting)
@@ -90,6 +90,21 @@ bot.command('ver', async ctx => {
   .then(async () => ctx.reply(msg))
   .then(async () => logInfo('version found', id, `version found for ${name}`))
   .catch(err => logOnCommandError('ver', id, err, ctx))
+})
+
+bot.command('src', async ctx => {
+  const id = ctx.chat.id
+  const text = ctx.message.text
+  checkOnName(text, '/src', ctx)
+  const name = purgeName(text, '/ver')
+  const uri = `https://rubygems.org/api/v1/gems/${name}.json`
+  logInfo('source searching', id, `Searching source for "${name}".`, ctx)
+  axios
+  .get(uri)
+  .then(async res => res.data.source_code_uri)
+  .then(async src => ctx.reply(`Source code for ${name}: ${src}`))
+  .then(async () => logInfo('src', id, `src for ${name}.`))
+  .catch(err => logOnCommandError('src', id, err, ctx))
 })
 
 const checkOnName = (text, cmd, ctx) => {
