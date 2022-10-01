@@ -104,7 +104,7 @@ bot.command('src', async ctx => {
   .get(uri)
   .then(async res => {
     const source = res.data.source_code_uri;
-    console.log(source)
+    console.log(res.data)
     return src = source
   })
   .then(async src => ctx.reply(`Source code for ${name}: ${src}`))
